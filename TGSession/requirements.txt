@@ -1,0 +1,9 @@
+telethon>=1.28.5
+fastapi>=0.95.0
+uvicorn>=0.21.1
+pydantic>=1.10.7
+qrcode>=7.4.2
+pillow>=9.5.0
+jsonpickle>=3.0.1
+pysocks>=1.7.1
+python-multipart>=0.0.6 
