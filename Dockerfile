@@ -15,7 +15,7 @@ WORKDIR /build/TGSessionWeb
 
 # 复制包配置文件并安装依赖（利用Docker缓存）
 COPY TGSessionWeb/package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # 复制源代码并构建
 COPY TGSessionWeb/ .
