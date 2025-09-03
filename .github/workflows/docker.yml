@@ -2,7 +2,7 @@ name: tgsession-docker
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
     paths:
       - 'tgsession/**'
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.DOCKER }}
 
       - name: Docker metadata
         id: meta
