@@ -73,7 +73,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, getCurrentInstance } from 'vue';
+import { defineComponent, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import type { FormInstance } from 'element-plus';
 import api from '@/utils/api';
@@ -165,16 +165,39 @@ export default defineComponent({
     };
     
     const copyToClipboard = (text: string) => {
-      // 使用全局的复制方法（兼容HTTP环境）
-      const app = getCurrentInstance()
-      if (app?.appContext.config.globalProperties.$copyToClipboard) {
-        app.appContext.config.globalProperties.$copyToClipboard(text)
-      } else {
-        // 降级提示
+      // 直接使用传统复制方法，兼容所有环境
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      textArea.style.top = '0'
+      textArea.style.left = '0'
+      
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      
+      try {
+        const successful = document.execCommand('copy')
+        if (successful) {
+          ElMessage({
+            message: '已复制到剪贴板',
+            type: 'success'
+          });
+        } else {
+          ElMessage({
+            message: '复制失败',
+            type: 'error'
+          });
+        }
+      } catch (err) {
+        console.error('复制失败:', err)
         ElMessage({
-          message: '复制功能不可用，请手动复制',
+          message: '复制失败',
           type: 'error'
         });
+      } finally {
+        document.body.removeChild(textArea)
       }
     };
     

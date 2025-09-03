@@ -120,7 +120,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, nextTick, getCurrentInstance } from 'vue';
+import { defineComponent, ref, computed, nextTick } from 'vue';
 import { ElNotification } from 'element-plus';
 import { Iphone, PictureFilled, RefreshRight, CircleCheckFilled, Document, ArrowLeft } from '@element-plus/icons-vue';
 import api from '@/utils/api';
@@ -234,13 +234,30 @@ export default defineComponent({
     const copySession = (type: 'v1' | 'v2') => {
       const text = type === 'v1' ? sessionResult.value.v1_session : sessionResult.value.v2_session;
       
-      // 使用全局的复制方法（兼容HTTP环境）
-      const app = getCurrentInstance()
-      if (app?.appContext.config.globalProperties.$copyToClipboard) {
-        app.appContext.config.globalProperties.$copyToClipboard(text)
-      } else {
-        // 降级提示
-        notify('复制失败', '复制功能不可用，请手动复制', 'error');
+      // 直接使用传统复制方法，兼容所有环境
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      textArea.style.top = '0'
+      textArea.style.left = '0'
+      
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      
+      try {
+        const successful = document.execCommand('copy')
+        if (successful) {
+          notify('复制成功', `已将${type === 'v1' ? 'V1' : 'V2'} Session复制到剪贴板`, 'success');
+        } else {
+          notify('复制失败', '请手动选择并复制', 'error');
+        }
+      } catch (err) {
+        console.error('复制失败:', err)
+        notify('复制失败', '请手动选择并复制', 'error');
+      } finally {
+        document.body.removeChild(textArea)
       }
     };
     
