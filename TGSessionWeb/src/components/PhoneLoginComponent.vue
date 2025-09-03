@@ -257,7 +257,7 @@ export default defineComponent({
     const codeRules = {
       code: [
         { required: true, message: '请输入验证码', trigger: 'blur' },
-        { min: 5, max: 5, message: '验证码为5位数字', trigger: 'blur' }
+        { min: 6, max: 6, message: '验证码为6位数字', trigger: 'blur' }
       ]
     };
     

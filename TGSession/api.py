@@ -83,10 +83,26 @@ background_task_control: Dict[str, bool] = {}
 # 获取客户端IP地址
 def get_client_ip(request: Request) -> str:
 	"""获取客户端IP地址"""
+	# 优先使用 X-Real-IP (nginx设置的真实客户端IP)
+	real_ip = request.headers.get("X-Real-IP")
+	if real_ip and real_ip.strip():
+		client_ip = real_ip.strip()
+		print(f"[IP] 使用 X-Real-IP: {client_ip}")
+		return client_ip
+	
+	# 其次使用 X-Forwarded-For 的第一个IP
 	forwarded = request.headers.get("X-Forwarded-For")
 	if forwarded:
-		return forwarded.split(",")[0]
-	return request.client.host
+		# 取第一个IP并去除空格
+		first_ip = forwarded.split(",")[0].strip()
+		if first_ip:
+			print(f"[IP] 使用 X-Forwarded-For: {first_ip} (原始: {forwarded})")
+			return first_ip
+	
+	# 最后使用直连IP
+	direct_ip = request.client.host if request.client else "unknown"
+	print(f"[IP] 使用直连IP: {direct_ip}")
+	return direct_ip
 
 # 用于QR码登录
 async def qr_login(client_id: str) -> Dict[str, Any]:
