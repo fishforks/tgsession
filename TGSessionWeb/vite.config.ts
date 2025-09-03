@@ -23,7 +23,22 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/active_sessions': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      },
       '/cleanup_all': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/cleanup': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/health': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false

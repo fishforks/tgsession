@@ -54,7 +54,7 @@
           <el-input 
             v-model="codeForm.code" 
             placeholder="请输入验证码"
-            maxlength="5"
+            maxlength="6"
           ></el-input>
         </el-form-item>
         

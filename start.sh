@@ -83,7 +83,10 @@ fi)
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 15s;
+        proxy_send_timeout 15s;
         proxy_read_timeout 300s;
+        proxy_buffering off;
     }
 
     location = /check_qr_status {
@@ -92,18 +95,34 @@ fi)
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 10s;
+        proxy_read_timeout 30s;
+        proxy_buffering off;
     }
 
     location = /active_sessions {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/active_sessions;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
-    location ^~ /cleanup {
-        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
+    location = /cleanup_all {
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/cleanup_all;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location ~ ^/cleanup/(.+)$ {
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/cleanup/\$1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     # Static assets
