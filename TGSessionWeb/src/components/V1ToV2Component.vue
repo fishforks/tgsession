@@ -73,7 +73,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, getCurrentInstance } from 'vue';
 import { ElMessage } from 'element-plus';
 import type { FormInstance } from 'element-plus';
 import api from '@/utils/api';
@@ -165,19 +165,17 @@ export default defineComponent({
     };
     
     const copyToClipboard = (text: string) => {
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          ElMessage({
-            message: '已复制到剪贴板',
-            type: 'success'
-          });
-        })
-        .catch(() => {
-          ElMessage({
-            message: '复制失败',
-            type: 'error'
-          });
+      // 使用全局的复制方法（兼容HTTP环境）
+      const app = getCurrentInstance()
+      if (app?.appContext.config.globalProperties.$copyToClipboard) {
+        app.appContext.config.globalProperties.$copyToClipboard(text)
+      } else {
+        // 降级提示
+        ElMessage({
+          message: '复制功能不可用，请手动复制',
+          type: 'error'
         });
+      }
     };
     
     return {

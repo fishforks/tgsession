@@ -151,7 +151,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue';
+import { defineComponent, ref, onMounted, onBeforeUnmount, getCurrentInstance } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
 import { CircleCheckFilled } from '@element-plus/icons-vue';
 import QRCode from 'qrcode';
@@ -520,30 +520,23 @@ export default defineComponent({
     
     // 复制到剪贴板
     const copyToClipboard = (text: string) => {
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          notify(
-            '复制成功', 
-            '已复制到剪贴板', 
-            'success'
-          );
-          
-          // 如果是复制会话信息，触发事件通知父组件
-          if (text === v1Session.value || text === v2Session.value) {
-            const sessionInfo: SessionInfo = {
-              v1_session: v1Session.value,
-              v2_session: v2Session.value
-            };
-            emit('session-received', sessionInfo);
-          }
-        })
-        .catch(() => {
-          notify(
-            '复制失败', 
-            '请手动选择文本并复制', 
-            'error'
-          );
-        });
+      // 使用全局的复制方法（兼容HTTP环境）
+      const app = getCurrentInstance()
+      if (app?.appContext.config.globalProperties.$copyToClipboard) {
+        app.appContext.config.globalProperties.$copyToClipboard(text)
+        
+        // 如果是复制会话信息，触发事件通知父组件
+        if (text === v1Session.value || text === v2Session.value) {
+          const sessionInfo: SessionInfo = {
+            v1_session: v1Session.value,
+            v2_session: v2Session.value
+          };
+          emit('session-received', sessionInfo);
+        }
+      } else {
+        // 降级提示
+        notify('复制失败', '复制功能不可用，请手动复制', 'error');
+      }
     };
     
     // 直接打开Telegram URL

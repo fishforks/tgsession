@@ -120,7 +120,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, nextTick } from 'vue';
+import { defineComponent, ref, computed, nextTick, getCurrentInstance } from 'vue';
 import { ElNotification } from 'element-plus';
 import { Iphone, PictureFilled, RefreshRight, CircleCheckFilled, Document, ArrowLeft } from '@element-plus/icons-vue';
 import api from '@/utils/api';
@@ -233,21 +233,15 @@ export default defineComponent({
     
     const copySession = (type: 'v1' | 'v2') => {
       const text = type === 'v1' ? sessionResult.value.v1_session : sessionResult.value.v2_session;
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          notify(
-            '复制成功', 
-            `已将${type === 'v1' ? 'V1' : 'V2'} Session复制到剪贴板`, 
-            'success'
-          );
-        })
-        .catch(() => {
-          notify(
-            '复制失败', 
-            '请手动选择并复制', 
-            'error'
-          );
-        });
+      
+      // 使用全局的复制方法（兼容HTTP环境）
+      const app = getCurrentInstance()
+      if (app?.appContext.config.globalProperties.$copyToClipboard) {
+        app.appContext.config.globalProperties.$copyToClipboard(text)
+      } else {
+        // 降级提示
+        notify('复制失败', '复制功能不可用，请手动复制', 'error');
+      }
     };
     
     const countries = ref<Country[]>([
