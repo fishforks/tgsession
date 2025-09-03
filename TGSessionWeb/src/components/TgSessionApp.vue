@@ -102,7 +102,7 @@
               <span>fish2018</span>
             </a>
             <div class="link-divider"></div>
-            <a href="https://t.me/s/tgsearchers" target="_blank" class="social-link">
+            <a href="https://t.me/s/tgsearchers3" target="_blank" class="social-link">
               <i class="fab fa-telegram-plane"></i>
               <span>资源宇宙</span>
             </a>
