@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  tgsession:
+    image: ghcr.io/fish2018/tgsession:latest
+    container_name: tgsession-app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # 基础配置
+      - TZ=Asia/Shanghai
+      - DOMAIN=localhost
+      
+      # 后端配置
+      - BACKEND_HOST=127.0.0.1
+      - BACKEND_PORT=8000
+      - WORKERS=2
+      
+      # 如果使用代理，请取消注释并配置
+      # - SOCKS5_PROXY=socks5://127.0.0.1:1080
+      # - HTTP_PROXY=http://proxy:8080
+      # - HTTPS_PROXY=https://proxy:8080
+      
+    volumes:
+      # 数据持久化
+      - tgsession-data:/app/data
+      - tgsession-logs:/app/logs
+      
+      # SSL证书挂载（可选，如果需要HTTPS）
+      # 将您的SSL证书放在 ./ssl 目录下，文件名为 fullchain.pem 和 privkey.pem
+      # - ./ssl:/app/data/ssl:ro
+      
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  tgsession-data:
+    driver: local
+  tgsession-logs:
+    driver: local
+
+# 可选：如果需要自定义网络
+# networks:
+#   tgsession-network:
+#     driver: bridge

@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+DEPLOYMENT.md
+*.md
+
+# Node.js
+TGSessionWeb/node_modules
+TGSessionWeb/.vite
+TGSessionWeb/dist
+
+# Python
+TGSession/__pycache__
+TGSession/*.pyc
+TGSession/.venv
+TGSession/venv
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# CI/CD
+.github

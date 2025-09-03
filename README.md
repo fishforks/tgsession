@@ -1,8 +1,162 @@
-# tgsession
-https://tgs.252035.xyz/ 在线获取TG Session V1 V2，支持扫码、手机号获取
+# TGSession
 
-# 部署配置参考
-`nginx配置`
+TGSession 是一个用于获取 Telegram Session 的 Web 应用，支持 V1 和 V2 版本，提供扫码登录和手机号登录两种方式。
+
+🌐 **在线体验**: https://tgs.252035.xyz/
+
+## ✨ 功能特性
+
+- 📱 支持手机号登录获取 Session
+- 📷 支持二维码扫码登录
+- 🔄 支持 Session V1 和 V2 格式
+- 🐳 Docker 一键部署
+- 🌐 现代化 Web 界面
+- 🔒 安全的会话管理
+
+## 🚀 快速开始
+
+### 方式一：Docker Compose（推荐）
+
+这是最简单的部署方式，适合大多数用户：
+
+```bash
+# 1. 下载 docker-compose.yml
+curl -O https://raw.githubusercontent.com/fish2018/tgsession/main/docker-compose.yml
+
+# 2. 启动服务
+docker-compose up -d
+
+# 3. 访问应用
+open http://localhost
+```
+
+### 方式二：Docker 命令
+
+```bash
+# 拉取镜像
+docker pull ghcr.io/fish2018/tgsession:latest
+
+# 运行容器
+docker run -d \
+  --name tgsession \
+  -p 80:80 \
+  -v tgsession-data:/app/data \
+  -v tgsession-logs:/app/logs \
+  -e DOMAIN=localhost \
+  ghcr.io/fish2018/tgsession:latest
+
+# 查看日志
+docker logs -f tgsession
+```
+
+### 方式三：从源码构建
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/fish2018/tgsession.git
+cd tgsession
+
+# 2. 构建镜像
+docker build -t tgsession .
+
+# 3. 运行容器
+docker run -d \
+  --name tgsession \
+  -p 80:80 \
+  -v tgsession-data:/app/data \
+  -v tgsession-logs:/app/logs \
+  tgsession
+```
+
+## ⚙️ 配置说明
+
+### 环境变量
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `DOMAIN` | `localhost` | 访问域名 |
+| `BACKEND_HOST` | `127.0.0.1` | 后端服务地址 |
+| `BACKEND_PORT` | `8000` | 后端服务端口 |
+| `WORKERS` | `2` | FastAPI 工作进程数 |
+| `TZ` | `Asia/Shanghai` | 时区设置 |
+
+### HTTPS 配置
+
+如果需要启用 HTTPS，请将 SSL 证书文件放置在挂载的数据目录中：
+
+```bash
+# 创建 SSL 证书目录
+mkdir -p ./ssl
+
+# 复制证书文件（文件名必须完全一致）
+cp /path/to/your/fullchain.pem ./ssl/
+cp /path/to/your/privkey.pem ./ssl/
+
+# 更新 docker-compose.yml，取消注释 SSL 挂载部分
+# - ./ssl:/app/data/ssl:ro
+```
+
+### 使用自定义配置
+
+```yaml
+version: '3.8'
+services:
+  tgsession:
+    image: ghcr.io/fish2018/tgsession:latest
+    container_name: tgsession-app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=your-domain.com
+      - WORKERS=4
+      - TZ=Asia/Shanghai
+    volumes:
+      - tgsession-data:/app/data
+      - tgsession-logs:/app/logs
+      - ./ssl:/app/data/ssl:ro  # HTTPS 证书
+    restart: unless-stopped
+
+volumes:
+  tgsession-data:
+  tgsession-logs:
+```
+
+## 📋 开发部署
+
+如果需要在开发环境中部署或进行二次开发：
+
+### 后端开发
+
+```bash
+# 1. 进入后端目录
+cd TGSession
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 启动后端服务
+python -m uvicorn api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+### 前端开发
+
+```bash
+# 1. 进入前端目录
+cd TGSessionWeb
+
+# 2. 安装依赖
+npm install
+
+# 3. 启动开发服务器
+npm run dev
+```
+
+## 🔧 传统部署
+
+如果不使用 Docker，也可以采用传统的 Nginx + Supervisor 方式部署：
+
+### Nginx 配置
 ```
 server {
     # 监听HTTP请求并重定向到HTTPS
@@ -110,8 +264,11 @@ server {
 }
 ```
 
-如果使用supervisor部署后端，可以参考配置
-```
+### Supervisor 配置
+
+如果使用 Supervisor 管理后端服务：
+
+```ini
 [program:tgs]
 command=/usr/bin/python3 -m uvicorn api:app --host 127.0.0.1 --port 8000
 directory=/root/work/tgsession  ; 项目的文件夹路径
@@ -128,3 +285,79 @@ stdout_logfile_maxbytes=50MB    ; 标准输出日志文件的最大字节数
 stdout_logfile=/root/work/logs/session.log
 environment=PYTHONUNBUFFERED=1  ; 确保Python输出不被缓冲，实时显示日志
 ```
+
+## 🚨 故障排除
+
+### 常见问题
+
+**Q: 容器启动失败**
+```bash
+# 检查容器日志
+docker logs tgsession
+
+# 检查端口是否被占用
+netstat -tulpn | grep :80
+```
+
+**Q: 无法访问服务**
+```bash
+# 检查服务状态
+docker ps
+curl http://localhost/health
+
+# 检查防火墙设置
+sudo ufw status
+```
+
+**Q: Session 获取失败**
+- 确保网络连接正常
+- 检查 Telegram 服务器连接
+- 查看容器内部日志：`docker exec -it tgsession tail -f /app/logs/backend.log`
+
+### 维护命令
+
+```bash
+# 更新到最新版本
+docker-compose pull
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 重启服务
+docker-compose restart
+
+# 清理日志
+docker exec tgsession sh -c 'truncate -s 0 /app/logs/*.log'
+
+# 备份数据
+docker cp tgsession:/app/data ./backup/
+
+# 恢复数据
+docker cp ./backup/data tgsession:/app/
+```
+
+## 🔒 安全建议
+
+- 建议在生产环境中使用 HTTPS
+- 定期备份重要数据
+- 不要在公网直接暴露管理接口
+- 使用防火墙限制访问
+- 定期更新镜像版本
+
+## 📝 更新日志
+
+- **v1.0.0**: 初始版本，支持基本的 Session 获取功能
+- 支持 Docker 部署和 GitHub Actions 自动构建
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+本项目采用 MIT 许可证。
+
+## 🙏 致谢
+
+感谢所有为这个项目做出贡献的开发者！
