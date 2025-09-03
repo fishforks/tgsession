@@ -42,7 +42,7 @@ server {
     error_log /var/log/nginx/error.log;
 
 $(if [ "$SSL_AVAILABLE" = true ]; then
-    echo "    return 301 https://\$host\$request_uri;"
+    echo "    return 301 https://\\\$host\\\$request_uri;"
     echo "}"
     echo ""
     echo "# HTTPS server"
@@ -66,10 +66,10 @@ fi)
     # Health endpoint (API)
     location = /health {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/health;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_connect_timeout 5s;
         proxy_read_timeout 10s;
         proxy_send_timeout 5s;
@@ -79,31 +79,31 @@ fi)
     # API endpoints
     location = /get_session {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/get_session;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_read_timeout 300s;
     }
 
     location = /check_qr_status {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/check_qr_status;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location = /active_sessions {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/active_sessions;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
     }
 
     location ^~ /cleanup {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
     }
 
     # Static assets
@@ -118,7 +118,7 @@ fi)
     location / {
         root /app/frontend/dist;
         index index.html;
-        try_files $uri $uri/ /index.html;
+        try_files \$uri \$uri/ /index.html;
         location ~* \.html$ {
             add_header Cache-Control "no-cache, no-store, must-revalidate";
             add_header Pragma "no-cache";
