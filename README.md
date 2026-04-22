@@ -77,7 +77,7 @@ docker run -d \
 | `DOMAIN` | `localhost` | 访问域名 |
 | `BACKEND_HOST` | `127.0.0.1` | 后端服务地址 |
 | `BACKEND_PORT` | `8000` | 后端服务端口 |
-| `WORKERS` | `2` | FastAPI 工作进程数 |
+| `WORKERS` | `1` | FastAPI 工作进程数。当前登录状态保存在内存中，必须使用单进程 |
 | `TZ` | `Asia/Shanghai` | 时区设置 |
 
 ### HTTPS 配置
@@ -109,7 +109,7 @@ services:
       - "443:443"
     environment:
       - DOMAIN=your-domain.com
-      - WORKERS=4
+      - WORKERS=1
       - TZ=Asia/Shanghai
     volumes:
       - tgsession-data:/app/data

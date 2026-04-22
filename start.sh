@@ -6,7 +6,13 @@ export TZ=${TZ:-Asia/Shanghai}
 export DOMAIN=${DOMAIN:-localhost}
 export BACKEND_HOST=${BACKEND_HOST:-127.0.0.1}
 export BACKEND_PORT=${BACKEND_PORT:-8000}
-export WORKERS=${WORKERS:-2}
+export WORKERS=${WORKERS:-1}
+
+# 当前登录流程状态保存在进程内存中，多 worker 会导致多步请求落到不同进程后丢失状态。
+if [ "${WORKERS}" != "1" ]; then
+    echo "WORKERS=${WORKERS} is not supported with in-memory login state, forcing WORKERS=1"
+    WORKERS=1
+fi
 
 echo "Starting TGSession integrated service..."
 echo "- Domain: ${DOMAIN}"
@@ -172,5 +178,4 @@ fi
 
 echo "Starting Nginx..."
 nginx -t && nginx -g "daemon off;"
-
 

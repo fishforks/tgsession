@@ -132,7 +132,6 @@
         </el-form>
 
         <div class="form-buttons">
-          <el-button @click="resetQR" :disabled="loading">重新生成二维码</el-button>
           <el-button type="primary" @click="submitTwoFA" :loading="loading">
             验证密码
           </el-button>

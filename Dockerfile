@@ -37,7 +37,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TZ=Asia/Shanghai \
     BACKEND_HOST=127.0.0.1 \
     BACKEND_PORT=8000 \
-    WORKERS=2
+    WORKERS=1
 
 # 镜像标签
 LABEL org.opencontainers.image.title="TGSession" \
@@ -87,5 +87,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 # 使用tini作为init进程
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["/app/start.sh"]
-
 

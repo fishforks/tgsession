@@ -15,7 +15,7 @@ services:
       # 后端配置
       - BACKEND_HOST=127.0.0.1
       - BACKEND_PORT=8000
-      - WORKERS=2
+      - WORKERS=1
       
       # 如果使用代理，请取消注释并配置
       # - SOCKS5_PROXY=socks5://127.0.0.1:1080
