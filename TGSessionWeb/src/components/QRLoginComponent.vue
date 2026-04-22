@@ -101,6 +101,45 @@
       </div>
       
       <div v-else-if="currentStep === 1" class="result-container" key="result-step">
+        <el-alert
+          title="需要两步验证"
+          type="info"
+          description="请输入您在 Telegram 中设置的两步验证密码"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 20px;"
+        ></el-alert>
+
+        <div v-if="error" class="error-container">
+          <el-alert
+            :title="error"
+            type="error"
+            show-icon
+            :closable="false"
+            style="margin-bottom: 20px;"
+          ></el-alert>
+        </div>
+
+        <el-form class="twofa-form" @submit.prevent>
+          <el-form-item label="两步验证密码">
+            <el-input
+              v-model="twoFAPassword"
+              placeholder="请输入两步验证密码"
+              show-password
+              @keyup.enter="submitTwoFA"
+            ></el-input>
+          </el-form-item>
+        </el-form>
+
+        <div class="form-buttons">
+          <el-button @click="resetQR" :disabled="loading">重新生成二维码</el-button>
+          <el-button type="primary" @click="submitTwoFA" :loading="loading">
+            验证密码
+          </el-button>
+        </div>
+      </div>
+
+      <div v-else-if="currentStep === 2" class="result-container" key="success-step">
         <div class="success-message">
           <el-alert
             title="登录成功！"
@@ -181,6 +220,7 @@ export default defineComponent({
     const progressStatus = ref('');
     const v1Session = ref('');
     const v2Session = ref('');
+    const twoFAPassword = ref('');
     const retryCount = ref(0);
     const maxRetries = 5;
     const pollingStarted = ref(false); // 新增：标记是否已开始轮询
@@ -445,7 +485,7 @@ export default defineComponent({
             statusMessage.value = '登录成功！';
             progress.value = 100;
             progressStatus.value = 'success';
-            currentStep.value = 1;
+            currentStep.value = 2;
             
             // 清除轮询
             if (pollInterval) {
@@ -464,6 +504,11 @@ export default defineComponent({
             // 需要输入密码（二步验证）
             statusMessage.value = '请在手机上完成二步验证...';
             progressStatus.value = 'warning';
+            currentStep.value = 1;
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
           } else if (response.data.need_code) {
             // 已扫描，需要输入验证码
             statusMessage.value = '请在手机上输入验证码...';
@@ -492,6 +537,46 @@ export default defineComponent({
         return Promise.resolve(null); // 确保在失败时也返回一个已解决的Promise
       }
     };
+
+    const submitTwoFA = async () => {
+      if (!twoFAPassword.value.trim()) {
+        error.value = '请输入两步验证密码';
+        return;
+      }
+
+      loading.value = true;
+      error.value = '';
+
+      try {
+        const response = await api.post<QRLoginResponse>('/get_session', {
+          use_qr: true,
+          password: twoFAPassword.value
+        });
+
+        if (response.data.success && (response.data.v1_session || response.data.v2_session)) {
+          v1Session.value = response.data.v1_session || '';
+          v2Session.value = response.data.v2_session || '';
+          currentStep.value = 2;
+          notify('登录成功', '已成功获取Telegram会话信息', 'success');
+          return;
+        }
+
+        if (response.data.need_password) {
+          error.value = response.data.message || '两步验证密码错误，请重新输入';
+          return;
+        }
+
+        error.value = response.data.message || '两步验证失败';
+      } catch (err: any) {
+        if (err.response) {
+          error.value = err.response.data.detail || '两步验证失败';
+        } else {
+          error.value = '网络错误，请稍后重试';
+        }
+      } finally {
+        loading.value = false;
+      }
+    };
     
     // 重置二维码
     const resetQR = () => {
@@ -508,6 +593,7 @@ export default defineComponent({
       currentStep.value = 0;
       v1Session.value = '';
       v2Session.value = '';
+      twoFAPassword.value = '';
       error.value = '';
       pollingStarted.value = false; // 重置轮询状态
       
@@ -622,6 +708,7 @@ export default defineComponent({
       progressStatus,
       v1Session,
       v2Session,
+      twoFAPassword,
       retryCount,
       maxRetries,
       pollingStarted, // 导出新增的状态变量
@@ -629,6 +716,7 @@ export default defineComponent({
       generateQRCode,
       resetQR,
       resetForm,
+      submitTwoFA,
       copyToClipboard,
       openTelegramUrl,
       imageLoaded,
@@ -887,6 +975,11 @@ export default defineComponent({
   display: flex;
   justify-content: center;
   gap: 10px;
+}
+
+.twofa-form {
+  max-width: 420px;
+  margin: 0 auto 20px;
 }
 
 .form-buttons .el-button {

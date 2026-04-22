@@ -9,6 +9,7 @@ import json
 import jsonpickle
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
+from telethon.errors import SessionPasswordNeededError, PasswordHashInvalidError
 import socks
 import time
 from typing import Optional, Dict, Any, Union
@@ -73,12 +74,31 @@ class SessionResponse(BaseModel):
 	qr_code_url: Optional[str] = None  # 原始二维码URL
 	need_code: bool = False
 	need_password: bool = False
+	hint: Optional[str] = None
 
 # 存储正在进行的登录过程，使用IP作为键
 active_clients: Dict[str, Any] = {}
 
 # 添加标志来控制后台任务
 background_task_control: Dict[str, bool] = {}
+
+async def finalize_client_session(client_id: str, client: TelegramClient) -> SessionResponse:
+	"""生成V1/V2 session并清理客户端状态"""
+	v1_session = client.session.save()
+	v2_session = await convert_v1_to_v2(v1_session)
+
+	if client.is_connected():
+		await client.disconnect()
+
+	active_clients.pop(client_id, None)
+	background_task_control.pop(client_id, None)
+
+	return SessionResponse(
+		success=True,
+		message="成功获取到 session",
+		v1_session=v1_session,
+		v2_session=v2_session
+	)
 
 # 获取客户端IP地址
 def get_client_ip(request: Request) -> str:
@@ -259,6 +279,12 @@ async def poll_qr_login(client_id: str, background_tasks: BackgroundTasks):
 			else:
 				print(f"警告: 客户端ID {client_id} 在设置成功后不存在")
 				return None
+	except SessionPasswordNeededError:
+		print(f"QR码登录需要两步验证密码: {client_id}")
+		if client_id in active_clients:
+			active_clients[client_id]["need_password"] = True
+			active_clients[client_id]["login_type"] = "qr"
+			active_clients[client_id]["created_at"] = datetime.now()
 	except asyncio.TimeoutError:
 		print(f"QR码扫描超时: {client_id}")
 		
@@ -427,6 +453,51 @@ async def get_session(request: Request, session_request: SessionRequest, backgro
 	
 	# 如果是QR码登录
 	if session_request.use_qr:
+		# 已扫码但需要两步验证密码时，沿用当前会话继续登录
+		if client_id in active_clients and active_clients[client_id].get("need_password"):
+			client = active_clients[client_id]["client"]
+			if not session_request.password:
+				return SessionResponse(
+					success=True,
+					message="需要两步验证密码",
+					need_password=True
+				)
+
+			try:
+				original_stdin = sys.stdin
+
+				class NonInteractiveStdin:
+					def readline(self):
+						raise Exception("禁止交互式输入")
+
+				try:
+					sys.stdin = NonInteractiveStdin()
+					await client.sign_in(password=session_request.password)
+				finally:
+					sys.stdin = original_stdin
+
+				return await finalize_client_session(client_id, client)
+			except PasswordHashInvalidError:
+				return SessionResponse(
+					success=False,
+					message="两步验证密码错误，请重新输入",
+					need_password=True
+				)
+			except Exception as e:
+				error_msg = str(e)
+				if "password" in error_msg.lower():
+					return SessionResponse(
+						success=False,
+						message="两步验证密码错误，请重新输入",
+						need_password=True
+					)
+
+				if client and client.is_connected():
+					await client.disconnect()
+				active_clients.pop(client_id, None)
+				background_task_control.pop(client_id, None)
+				raise HTTPException(status_code=500, detail=f"两步验证失败: {error_msg}")
+
 		# 启动QR登录
 		try:
 			# 如果该IP已经有活跃的会话，先清理
@@ -476,43 +547,44 @@ async def get_session(request: Request, session_request: SessionRequest, backgro
 				try:
 					sys.stdin = NonInteractiveStdin()
 					await client.sign_in(phone=session_request.phone_number, code=session_request.code)
-					active_clients[client_id]["code_verified"] = True
 				finally:
 					# 恢复标准输入
 					sys.stdin = original_stdin
-				
-				# 如果需要两步验证密码
-				if active_clients[client_id].get("need_password"):
-					if not session_request.password:
-						return SessionResponse(
-							success=False,
-							message="请提供两步验证密码",
-							need_password=True
-						)
-					
-					# 临时替换标准输入，防止在密码提交过程中产生交互式输入
-					try:
-						sys.stdin = NonInteractiveStdin()
-						await client.sign_in(password=session_request.password)
-					finally:
-						# 恢复标准输入
-						sys.stdin = original_stdin
-			
-			# 获取V1 session
-			v1_session = client.session.save()
-			
-			# 转换为V2 session
-			v2_session = await convert_v1_to_v2(v1_session)
-			
-			# 清理
-			await client.disconnect()
-			del active_clients[client_id]
-			
+				active_clients[client_id]["code_verified"] = True
+				active_clients[client_id]["need_code"] = False
+
+			# 如果已经进入两步验证阶段，只处理密码
+			if active_clients[client_id].get("need_password"):
+				if not session_request.password:
+					return SessionResponse(
+						success=True,
+						message="需要两步验证密码",
+						need_password=True
+					)
+
+				try:
+					sys.stdin = NonInteractiveStdin()
+					await client.sign_in(password=session_request.password)
+				finally:
+					sys.stdin = original_stdin
+
+			return await finalize_client_session(client_id, client)
+		except SessionPasswordNeededError:
+			active_clients[client_id]["need_password"] = True
+			active_clients[client_id]["need_code"] = False
+			active_clients[client_id]["code_verified"] = True
 			return SessionResponse(
 				success=True,
-				message="成功获取到 session",
-				v1_session=v1_session,
-				v2_session=v2_session
+				message="需要两步验证密码",
+				need_password=True
+			)
+		except PasswordHashInvalidError:
+			active_clients[client_id]["need_password"] = True
+			active_clients[client_id]["need_code"] = False
+			return SessionResponse(
+				success=False,
+				message="两步验证密码错误，请重新输入",
+				need_password=True
 			)
 		except Exception as e:
 			# 处理各种异常
@@ -522,13 +594,6 @@ async def get_session(request: Request, session_request: SessionRequest, backgro
 					success=False,
 					message="验证码无效，请重新输入",
 					need_code=True
-				)
-			elif "2fa" in error_msg.lower() or "password" in error_msg.lower():
-				active_clients[client_id]["need_password"] = True
-				return SessionResponse(
-					success=False,
-					message="需要两步验证密码",
-					need_password=True
 				)
 			elif "禁止交互式输入" in error_msg:
 				# 我们自己抛出的错误，需要更友好的错误提示
@@ -648,6 +713,13 @@ async def check_qr_status(request: Request):
 			"message": "二维码登录成功",
 			"v1_session": v1_session,
 			"v2_session": v2_session
+		}
+
+	if client_data.get("need_password"):
+		return {
+			"success": True,
+			"message": "需要两步验证密码",
+			"need_password": True
 		}
 	
 	# 如果QR码已过期或需要更新，返回最新的QR码
